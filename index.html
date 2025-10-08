@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terra Dotta Pricing + Proposal Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @keyframes slide-in-right {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .animate-slide-in-right { animation: slide-in-right 0.5s forwards; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useCallback, useEffect } = React;
+
+        // SVG Icons
+        const Plus = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+        const Trash2 = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
+        const Calculator = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/></svg>;
+        const DollarSign = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
+        const X = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+        const CheckCircle = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+        const Copy = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>;
+        const FileText = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>;
+        const Eye = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+
+        // Product data and constants
+        const productPrices = { 'Study Abroad': { '0 - 100': 8700, '101 - 200': 11872, '201 - 300': 15044, '301 - 400': 18217, '401 - 500': 21389, '501 - 600': 24561, '601 - 700': 27733, '701 - 800': 30906, '800 - 900': 34078, '901 - 1,000': 37250, '1,001 - 1,100': 42250, '1,101 - 1,250': 43500, '1,251 - 1,500': 47250, '1,501 - 2,000': 52250, '2,001 - 3,500': 56000, '3,501 - 6,000': 62250, '6,001 - 11,000+': 72250 }, 'ISSS': { '0 - 100': 10500, '101 - 200': 14861, '201 - 300': 19222, '301 - 400': 23583, '401 - 500': 27944, '501 - 600': 32306, '601 - 700': 36667, '701 - 800': 41028, '800 - 900': 45389, '901 - 1,000': 49750, '1,001 - 1,100': 54750, '1,101 - 1,250': 56000, '1,251 - 1,500': 59750, '1,501 - 2,000': 64750, '2,001 - 3,500': 68500, '3,501 - 6,000': 74750, '6,001 - 11,000+': 84750 }, 'Enterprise Travel Registry': { '0 - 100': 6100, '101 - 200': 8061, '201 - 300': 10022, '301 - 400': 11983, '401 - 500': 13944, '501 - 600': 15906, '601 - 700': 17867, '701 - 800': 19828, '800 - 900': 21789, '901 - 1,000': 23750, '1,001 - 1,100': 28750, '1,101 - 1,250': 30000, '1,251 - 1,500': 33750, '1,501 - 2,000': 38750, '2,001 - 3,500': 42500, '3,501 - 6,000': 48750, '6,001 - 11,000+': 58750 }, 'AlertTraveler': { '0 - 100': 4750, '101 - 200': 5442, '201 - 300': 6133, '301 - 400': 6825, '401 - 500': 7517, '501 - 600': 8208, '601 - 700': 8900, '701 - 800': 9592, '800 - 900': 10283, '901 - 1,000': 10975, '1,001 - 1,100': 15975, '1,101 - 1,250': 17225, '1,251 - 1,500': 20975, '1,501 - 2,000': 25975, '2,001 - 3,500': 29725, '3,501 - 6,000': 35975, '6,001 - 11,000+': 45975 }, 'Engage for SA': { '0 - 100': 2871, '101 - 200': 3918, '201 - 300': 4965, '301 - 400': 6012, '401 - 500': 7058, '501 - 600': 8105, '601 - 700': 9152, '701 - 800': 10199, '800 - 900': 11246, '901 - 1,000': 12293, '1,001 - 1,100': 13943, '1,101 - 1,250': 14355, '1,251 - 1,500': 15593, '1,501 - 2,000': 17243, '2,001 - 3,500': 18480, '3,501 - 6,000': 20543, '6,001 - 11,000+': 23843 }, 'Engage for ISSS': { '0 - 100': 3465, '101 - 200': 4904, '201 - 300': 6343, '301 - 400': 7782, '401 - 500': 9222, '501 - 600': 10661, '601 - 700': 12100, '701 - 800': 13539, '800 - 900': 14978, '901 - 1,000': 16418, '1,001 - 1,100': 18068, '1,101 - 1,250': 18480, '1,251 - 1,500': 19718, '1,501 - 2,000': 21368, '2,001 - 3,500': 22605, '3,501 - 6,000': 24668, '6,001 - 11,000+': 27968 }, 'Agreements': { all: 9500 }, 'Dashboards': { all: 5000 }, 'Payment Gateway': { all: 1000 } };
+        const implementationCosts = { 'Study Abroad': { '0 - 100': 12000, '101 - 200': 12000, '201 - 300': 12000, '301 - 400': 12000, '401 - 500': 12000, '501 - 600': 13500, '601 - 700': 13500, '701 - 800': 13500, '800 - 900': 13500, '901 - 1,000': 13500, '1,001 - 1,100': 15000, '1,101 - 1,250': 15000, '1,251 - 1,500': 15000, '1,501 - 2,000': 15000, '2,001 - 3,500': 15000, '3,501 - 6,000': 15000, '6,001 - 11,000+': 15000 }, 'ISSS': { all: 21750 }, 'AlertTraveler': { all: 1500 }, 'Engage for SA': { all: 1500 }, 'Engage for ISSS': { all: 1500 }, 'Enterprise Travel Registry': { all: 9000 }, 'Dashboards': { all: 5000 }, 'Agreements': { all: 6000 }, 'Payment Gateway': { all: 1000 } };
+        const availableProducts = Object.keys(productPrices);
+        const bandOptions = ['0 - 100', '101 - 200', '201 - 300', '301 - 400', '401 - 500', '501 - 600', '601 - 700', '701 - 800', '800 - 900', '901 - 1,000', '1,001 - 1,100', '1,101 - 1,250', '1,251 - 1,500', '1,501 - 2,000', '2,001 - 3,500', '3,501 - 6,000', '6,001 - 11,000+', '-'];
+        const STANDARD_ESCALATOR = 5;
+        const PREMIUM_IMPLEMENTATION_COST = 6500;
+        
+        const clientSuccessStory = `<p>UMBC, joining hundreds of other peer institutions like the University of Houston, Clark University, and the University of Louisville, has adopted the full Terra Dotta Global Engagement suite. By replacing their paper application process, outdated systems, and manual processes, our partners' Outgoing, Incoming, and Risk offices have regained more than 50% of their staff time, which they reinvested into developing new programs and cultivating relationships, leading to significant growth.</p>`;
+
+        const proposalContent = {
+            'ISSS': {
+                title: 'Terra Dotta International Student & Scholar Services (ISSS)',
+                summary: (inst) => `<p>Terra Dotta is honored to partner with <strong>${inst}</strong> in advancing your mission of global education excellence. We propose implementing our transformative Terra Dotta International Student & Scholar Services (ISSS) platform, a comprehensive solution that elevates your international community while positioning your institution as a leader in student success and operational innovation.</p><p>This investment represents more than a technology upgrade; it's a strategic commitment to your institution's growth and your students' success. ${inst} will join over 750 institutions worldwide who trust Terra Dotta as their partner in shaping the future of international education.</p>`,
+                benefits: () => `<h3>Visa Management & Compliance</h3><ul><li>Processes all visa types: F-1/F-2 students, J-1 exchange visitors, and employment-based visas (H-1B, O-1, TN, PERM)</li><li>Maintains SEVIS compliance with automated status tracking, batch processing, and real-time status alerts</li><li>Generates required immigration documents (I-20s, DS-2019s) and manages renewals</li></ul><h3>Operational Efficiency</h3><ul><li>Eliminates redundant data entry across multiple systems</li><li>Centralizes international data for improved integrity and reduced errors</li><li>Provides staff with more time to interact with students</li><li><strong>Delivers 50%+ time savings on core processes</strong></li></ul><h3>Student Experience & Growth</h3><ul><li>Simple-to-use student & scholar portal improving user experience</li><li><strong>10-20% increase in enrollment growth & student retention</strong></li><li>Faster I-20 processing enabling quicker student enrollment, reduced melt</li></ul><h3>Strategic Advantages</h3><ul><li>Better analysis, reporting and visibility for informed decision making</li><li>Scalable growth supporting institutions without additional staff</li><li>Future-proofs current and future student tuition and enrollment revenue</li><li>Transforms fragmented visa management into centralized platform that reduces compliance risk</li></ul>`,
+                roi: () => `<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0"><div><h3 style="color:#00aeef">Quantifiable Benefits</h3><ul><li>Hundreds of staff hours saved through process automation</li><li>Scalable growth supporting students without additional hires</li><li>50%+ time savings on core SEVIS processes</li><li>Improved student experience with faster processing times</li></ul></div><div><h3 style="color:#00aeef">Strategic Outcomes</h3><ul><li>Enhanced data transparency with real-time reporting</li><li>Better decision making through comprehensive analytics</li><li>Mission-aligned transformation with centralized data</li><li>Reduced compliance risk through automated SEVIS management</li></ul></div></div>
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;" />
+                    <h3>Client Success Story</h3>
+                    ${clientSuccessStory}
+                    <blockquote style="border-left: 4px solid #00aeef; padding-left: 15px; margin: 15px 0; font-style: italic;">“There’s absolutely no way anybody in ISS could have transitioned during the pandemic or any crisis without a solution like Terra Dotta.”<br><strong>— Director of International Student & Scholar Services, UMBC</strong></blockquote>`,
+                blurb: `<ul><li>Streamlines visa processing, SEVIS batching, and compliance management for F, J, H-1B and other visa types.</li><li>Improves the international student and scholar experience with a user-friendly portal for requests and communication.</li><li>Reduces administrative workload through process automation, delivering 50%+ time savings on core SEVIS tasks.</li></ul>`
+            },
+            'Study Abroad': {
+                title: 'Terra Dotta Study Abroad',
+                summary: (inst) => `<p>Terra Dotta is honored to partner with <strong>${inst}</strong> in advancing your mission of global education excellence. We propose implementing our transformative Terra Dotta Study Abroad platform, a comprehensive solution that elevates your international programs while positioning your institution as a leader in student mobility and cross-cultural learning.</p><p>This investment represents more than a technology upgrade; it's a strategic commitment to expanding your institution's global reach and your students' international competencies. ${inst} will join over 750 institutions worldwide who trust Terra Dotta as their partner in shaping the future of international education.</p>`,
+                benefits: () => `<h3>Program Management & Compliance</h3><ul><li>Processes all program types: faculty-led, exchange, third-party, and direct enrollment programs</li><li>Centralizes program catalog with filters by term, cost, eligibility, and travel registry integration</li><li>Manages advisor assignments, caseloads, and scholarship tracking with full disbursement control</li></ul><h3>Operational Efficiency</h3><ul><li>Eliminates redundant data entry across multiple systems</li><li>Centralizes study abroad data for improved integrity and reduced errors</li><li>Provides staff with more time to advise students and develop programs</li><li><strong>Delivers 50%+ time savings on core processes</strong></li></ul><h3>Student Experience & Growth</h3><ul><li>Simple-to-use student portal improving program discovery and application experience</li><li>Increase in study abroad participation & improved student engagement</li><li>Faster application processing enabling quicker program confirmations, reduced cancellations</li></ul><h3>Strategic Advantages</h3><ul><li>Better analysis, reporting and visibility for informed decision making</li><li>Scalable growth supporting increased participation without additional staff</li><li>Future-proofs current and future study abroad revenue and institutional goals</li><li>Transforms fragmented program management into centralized platform that reduces operational risk</li></ul>`,
+                roi: () => `<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0"><div><h3 style="color:#00aeef">Quantifiable Benefits</h3><ul><li>Hundreds of staff hours saved through process automation</li><li>Scalable growth supporting increased participation without additional hires</li><li>50%+ time savings on core administrative processes</li><li>Improved student experience with faster application processing times</li></ul></div><div><h3 style="color:#00aeef">Strategic Outcomes</h3><ul><li>Enhanced data transparency with real-time reporting and analytics</li><li>Better decision making through comprehensive program performance data</li><li>Mission-aligned transformation with centralized, accurate student data</li><li>Reduced operational risk through automated workflow management and compliance tracking</li></ul></div></div>
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;" />
+                    <h3>Client Success Story</h3>
+                    ${clientSuccessStory}
+                     <blockquote style="border-left: 4px solid #00aeef; padding-left: 15px; margin: 15px 0; font-style: italic;">“The software provided by Terra Dotta is helping us get to where we want to go.”<br><strong>— Caylie Middleton, Associate Director of Study Abroad, UMBC</strong></blockquote>`,
+                blurb: `<ul><li>Streamlines the entire study abroad lifecycle, from program discovery and applications to pre-departure and re-entry.</li><li>Centralizes management for all program types including faculty-led, exchange, and third-party providers.</li><li>Increases student participation and engagement with an intuitive, mobile-friendly portal.</li></ul>`
+            },
+            'Enterprise Travel Registry': {
+                title: 'Terra Dotta Enterprise Travel Registry',
+                summary: (inst) => `<p>Terra Dotta is honored to partner with <strong>${inst}</strong> in advancing your mission of global education excellence. We propose implementing our comprehensive Terra Dotta Enterprise Travel Registry platform, a transformative solution that elevates your duty of care responsibilities while positioning your institution as a leader in traveler safety and risk management.</p><p>Our Enterprise Travel Registry reimagines how universities protect and support their global community by centralizing travel oversight, enhancing real-time communication with travelers, and delivering unprecedented visibility into institutional travel activities - including full NSPM-33 compliance management.</p>`,
+                benefits: () => `<h3>Travel Management & Compliance</h3><ul><li>Tracks all traveler types: students, faculty, staff, and dependents across university-sponsored activities</li><li>Centralizes travel registry with NSPM-33 compliance reporting and federal mandate integration</li><li>Manages emergency contacts, itineraries, and risk assessments with real-time location tracking</li></ul><h3>Operational Efficiency</h3><ul><li>Eliminates redundant data entry across multiple departments and systems</li><li>Centralizes travel data for improved accuracy and streamlined duty of care processes</li><li>Delivers <strong>50%+ time savings</strong> on travel oversight and emergency response coordination</li></ul><h3>Traveler Safety & Communication</h3><ul><li>AlertTraveler® mobile app with GPS tracking and two-way emergency communication</li><li>Real-time safety alerts, country intelligence, and automated check-in capabilities</li><li>Faster emergency response enabling immediate traveler contact and support coordination</li></ul><h3>Strategic Advantages</h3><ul><li>Enhanced reporting and analytics for comprehensive travel risk assessment and decision making</li><li>Scalable platform supporting institutional growth without additional compliance staff</li><li>Future-proofs travel management with integrated federal reporting and evolving regulatory requirements</li></ul>`,
+                roi: () => `<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0"><div><h3 style="color:#00aeef">Quantifiable Benefits</h3><ul><li>Hundreds of staff hours saved through automated travel tracking and reporting</li><li>Scalable duty of care coverage supporting institutional growth without additional compliance staff</li><li>50%+ time savings on emergency response coordination and traveler communication</li><li>Improved traveler safety with faster emergency response and real-time location awareness</li></ul></div><div><h3 style="color:#00aeef">Strategic Outcomes</h3><ul><li>Enhanced risk transparency with real-time travel analytics and NSPM-33 reporting</li><li>Better decision making through comprehensive travel data and country risk intelligence</li><li>Reduced institutional liability through automated emergency protocols and comprehensive duty of care management</li></ul></div></div>
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;" />
+                    <h3>Client Success Story</h3>
+                    ${clientSuccessStory}
+                     <blockquote style="border-left: 4px solid #00aeef; padding-left: 15px; margin: 15px 0; font-style: italic;">“If something happens, we can quickly identify where they are and make sure they're safe. This also allows us to get a full picture of the international activity on campus.”<br><strong>— Caylie Middleton, Associate Director of Study Abroad, UMBC</strong></blockquote>`,
+                blurb: `<ul><li>Provides a centralized registry for all institutional travel, enhancing duty of care for students, faculty, and staff.</li><li>Ensures compliance with federal mandates like NSPM-33 through automated reporting and oversight.</li><li>Integrates with the AlertTraveler® mobile app for real-time location tracking, alerts, and emergency communication.</li></ul>`
+            },
+            'AlertTraveler': {
+                blurb: `<ul><li>Delivers critical, real-time safety alerts and country intelligence to travelers' mobile devices based on their GPS location.</li><li>Enables instant two-way communication and automated check-in requests during emergencies.</li><li>Provides administrators a unified dashboard to monitor traveler locations and manage incident responses.</li></ul>`
+            },
+            'Engage for SA': {
+                blurb: `<ul><li>Automates personalized communication to study abroad students based on their application status and milestones.</li><li>Uses email, SMS, and in-app notifications to increase participation and streamline advising.</li><li>Integrates with Study Abroad to trigger communications, reducing manual staff workload and improving engagement.</li></ul>`
+            },
+            'Engage for ISSS': {
+                blurb: `<ul><li>Simplifies compliance-related communication for international students and scholars.</li><li>Automates reminders for visa status, document submissions, and important deadlines to improve response rates.</li><li>Provides centralized message tracking and analytics to optimize outreach strategies and reduce administrative workload.</li></ul>`
+            },
+            'Agreements': {
+                blurb: `<ul><li>Creates a centralized repository for managing institutional partnership and mobility agreements.</li><li>Automates the agreement lifecycle with workflow routing, version control, and expiration alerts.</li><li>Provides robust search and reporting tools for full visibility into active, pending, and historical agreements.</li></ul>`
+            },
+            'Dashboards': {
+                blurb: `<ul><li>Provides an interactive analytics environment to visualize program data, compliance activity, and operational metrics.</li><li>Offers configurable widgets and filters for real-time insights into applications, traveler locations, and engagement.</li><li>Supports data-driven decision-making and executive reporting across all Terra Dotta modules.</li></ul>`
+            },
+            'Payment Gateway': {
+                blurb: `<ul><li>Enables secure collection and reconciliation of application fees, program deposits, and other payments within Terra Dotta.</li><li>Supports credit card and ACH transactions with PCI-compliant processing.</li><li>Reduces manual work by automatically linking payments to student applications and invoices.</li></ul>`
+            },
+        };
+
+        const getProductPrice = (productName, band) => {
+            if (productPrices[productName]?.all) return productPrices[productName].all;
+            return productPrices[productName]?.[band] || 0;
+        };
+        const getImplementationCost = (productName, band) => {
+            if (productName === 'Study Abroad') return implementationCosts['Study Abroad'][band] || 15000;
+            return implementationCosts[productName]?.all || 0;
+        };
+
+        // UI Components
+        const Modal = ({ isOpen, onClose, onConfirm, title, children }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+                    <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+                        <h2 className="text-lg font-bold mb-4">{title}</h2>
+                        <div className="mb-6">{children}</div>
+                        <div className="flex justify-end gap-4">
+                            <button onClick={onClose} className="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 transition-colors">Spread Cost</button>
+                            <button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">Year 1 Only</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        const Notification = ({ message, type, onDismiss }) => {
+            if (!message) return null;
+            return (
+                <div className={`fixed top-5 right-5 flex items-center px-6 py-3 rounded-lg shadow-lg text-white transition-all duration-300 transform animate-slide-in-right z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
+                    <div className="w-5 h-5"><CheckCircle /></div>
+                    <span className="font-medium mx-3">{message}</span>
+                    <button onClick={onDismiss} className="ml-auto p-1 rounded-full hover:bg-white/20 transition-colors">
+                        <div className="w-5 h-5"><X /></div>
+                    </button>
+                </div>
+            );
+        };
+        
+        const PricingTable = ({ products, term, escalator, getFinalImplementationCost, calculateYearlyPrice, calculateDiscountedPrice, formatCurrency, getDiscountDisplay, totals, averageDiscount }) => {
+            const yearlyTotals = Array.from({ length: term }, (_, yearIndex) => {
+                return products.reduce((sum, product) => {
+                    const yearlyPrice = calculateYearlyPrice(product.listPrice, yearIndex + 1, escalator);
+                    const discountedPrice = calculateDiscountedPrice(yearlyPrice, product.discount);
+                    let finalPrice = product.waiveYear1 && yearIndex === 0 ? 0 : discountedPrice;
+                    if (product.hasImplementation && !product.waiveImplementation) {
+                        const finalImplCost = getFinalImplementationCost(product);
+                        const implCost = calculateDiscountedPrice(finalImplCost, product.implementationDiscount);
+                        if (product.spreadImplementation) {
+                            finalPrice += Math.round(implCost / term);
+                        } else if (yearIndex === 0) {
+                            finalPrice += implCost;
+                        }
+                    }
+                    return sum + finalPrice;
+                }, 0);
+            });
+
+            return (
+                <div className="my-8">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4 text-slate-800">Investment Breakdown</h2>
+                    <div className="overflow-x-auto bg-white rounded-lg shadow-md border border-slate-200">
+                        <table className="w-full text-sm text-left text-slate-600">
+                            <thead className="text-xs text-white uppercase bg-sky-500">
+                                <tr>
+                                    <th scope="col" className="px-4 py-3">Solution</th>
+                                    <th scope="col" className="px-2 py-3 text-center">List Price</th>
+                                    <th scope="col" className="px-2 py-3 text-center">Discount</th>
+                                    {Array.from({ length: term }, (_, i) => (
+                                        <th key={i} scope="col" className="px-2 py-3 text-center">Year {i + 1}</th>
+                                    ))}
+                                    <th scope="col" className="px-4 py-3 text-center bg-orange-500">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {products.map((product, productIndex) => {
+                                    const yearlyPrices = Array.from({ length: term }, (_, i) => {
+                                        const yearlyPrice = calculateYearlyPrice(product.listPrice, i + 1, escalator);
+                                        return calculateDiscountedPrice(yearlyPrice, product.discount);
+                                    });
+                                    const productSubscriptionTotal = yearlyPrices.reduce((sum, price, i) => sum + (product.waiveYear1 && i === 0 ? 0 : price), 0);
+                                    const finalImplCost = getFinalImplementationCost(product);
+                                    const discountedImplCost = product.waiveImplementation ? 0 : calculateDiscountedPrice(finalImplCost, product.implementationDiscount);
+
+                                    return (
+                                        <React.Fragment key={product.id}>
+                                            <tr className="bg-white border-b hover:bg-slate-50">
+                                                <td className="px-4 py-4 font-bold text-slate-900 whitespace-nowrap">{product.name}</td>
+                                                <td className="px-2 py-4 text-right">{formatCurrency(product.listPrice)}</td>
+                                                <td className="px-2 py-4 text-center">{getDiscountDisplay(product.listPrice, product.discount)}</td>
+                                                {yearlyPrices.map((price, i) => (
+                                                    <td key={i} className="px-2 py-4 text-right">{product.waiveYear1 && i === 0 ? <span className="font-bold text-red-600">WAIVED</span> : formatCurrency(price)}</td>
+                                                ))}
+                                                <td className="px-4 py-4 text-right font-bold bg-orange-50">{formatCurrency(productSubscriptionTotal)}</td>
+                                            </tr>
+                                            {product.hasImplementation && (
+                                                <tr className="bg-white border-b hover:bg-slate-50">
+                                                    <td className="px-4 py-4 pl-8 text-slate-700 whitespace-nowrap">Implementation {product.premiumImplementation ? '(Premium)' : ''}</td>
+                                                    <td className="px-2 py-4 text-right">{formatCurrency(finalImplCost)}</td>
+                                                    <td className="px-2 py-4 text-center">{getDiscountDisplay(finalImplCost, product.implementationDiscount)}</td>
+                                                    {Array.from({ length: term }, (_, i) => {
+                                                        let displayValue = '-';
+                                                        if (!product.waiveImplementation && discountedImplCost > 0) {
+                                                            displayValue = product.spreadImplementation ? formatCurrency(Math.round(discountedImplCost / term)) : (i === 0 ? formatCurrency(discountedImplCost) : '-');
+                                                        }
+                                                        return <td key={i} className="px-2 py-4 text-right">{product.waiveImplementation ? <span className="font-bold text-red-600">WAIVED</span> : displayValue}</td>;
+                                                    })}
+                                                    <td className="px-4 py-4 text-right font-bold bg-orange-50">{product.waiveImplementation ? 'WAIVED' : formatCurrency(discountedImplCost)}</td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </tbody>
+                            <tfoot>
+                                <tr className="font-semibold text-white bg-slate-700">
+                                    <td className="px-4 py-3 text-base">TOTAL</td>
+                                    <td className="px-2 py-3 text-right">{formatCurrency(products.reduce((sum, p) => sum + p.listPrice + (p.hasImplementation ? getFinalImplementationCost(p) : 0), 0))}</td>
+                                    <td className="px-2 py-3 text-center">{averageDiscount}%</td>
+                                    {yearlyTotals.map((total, i) => (
+                                        <td key={i} className="px-2 py-3 text-right">{formatCurrency(total)}</td>
+                                    ))}
+                                    <td className="px-4 py-3 text-right bg-orange-500">{formatCurrency(totals.totalDiscountedPrice)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+        
+        // Main App Component
+        const App = () => {
+            // State
+            const [products, setProducts] = useState([{ id: 1, name: 'Study Abroad', band: '201 - 300', listPrice: 15044, discount: { type: 'percentage', value: 20 }, hasImplementation: true, premiumImplementation: false, showUnlimited: false, implementationCost: 12000, implementationDiscount: { type: 'percentage', value: 10 }, waiveYear1: false, waiveImplementation: false, isCurrentSolution: false, spreadImplementation: true }]);
+            const [term, setTerm] = useState(5);
+            const [escalator, setEscalator] = useState(3);
+            const [modal, setModal] = useState({ isOpen: false, productIndex: null });
+            const [notification, setNotification] = useState({ message: '', type: 'success' });
+            
+            const getNextMonthEndDate = () => {
+                const date = new Date();
+                date.setMonth(date.getMonth() + 2, 0);
+                return date.toISOString().split('T')[0];
+            };
+            const [validThrough, setValidThrough] = useState(getNextMonthEndDate());
+            const [proposalData, setProposalData] = useState({ institution: '', repName: 'Enter Name', repEmail: '@terradotta.com', repPhone: '' });
+
+            useEffect(() => {
+                if (notification.message) {
+                    const timer = setTimeout(() => setNotification({ message: '', type: 'success' }), 3000);
+                    return () => clearTimeout(timer);
+                }
+            }, [notification]);
+
+            const showNotification = (message, type = 'success') => setNotification({ message, type });
+
+            const formattedDate = useMemo(() => {
+                try {
+                    const date = new Date(validThrough + 'T00:00:00');
+                    const day = date.getDate();
+                    const month = date.toLocaleDateString('en-US', { month: 'long' });
+                    const year = date.getFullYear();
+                    const getOrdinal = (n) => {
+                        if (n >= 11 && n <= 13) return n + "th";
+                        switch (n % 10) {
+                            case 1: return n + "st";
+                            case 2: return n + "nd";
+                            case 3: return n + "rd";
+                            default: return n + "th";
+                        }
+                    };
+                    return `${month} ${getOrdinal(day)}, ${year}`;
+                } catch (error) {
+                    return validThrough;
+                }
+            }, [validThrough]);
+
+            const handleImplementationChange = (index, isChecked) => {
+                if (isChecked) {
+                    setModal({ isOpen: true, productIndex: index });
+                } else {
+                    const newProducts = [...products];
+                    newProducts[index] = { ...newProducts[index], hasImplementation: false, premiumImplementation: false, spreadImplementation: false };
+                    setProducts(newProducts);
+                }
+            };
+            
+            const handlePremiumChange = (index, isChecked) => {
+                const newProducts = [...products];
+                newProducts[index].premiumImplementation = isChecked;
+                if (isChecked && !newProducts[index].hasImplementation) {
+                    setModal({ isOpen: true, productIndex: index });
+                }
+                setProducts(newProducts);
+            };
+
+            const confirmSpread = (isYear1) => {
+                const { productIndex } = modal;
+                if (productIndex !== null) {
+                    const newProducts = [...products];
+                    newProducts[productIndex].hasImplementation = true;
+                    newProducts[productIndex].spreadImplementation = !isYear1;
+                    setProducts(newProducts);
+                }
+                setModal({ isOpen: false, productIndex: null });
+            };
+
+            const updateProduct = (index, field, value) => {
+                const newProducts = [...products];
+                const productToUpdate = { ...newProducts[index] };
+                if (field === 'discount' || field === 'implementationDiscount') {
+                    productToUpdate[field] = value;
+                } else if (field === 'band' || field === 'name') {
+                    productToUpdate[field] = value;
+                    const newName = field === 'name' ? value : productToUpdate.name;
+                    const newBand = field === 'band' ? value : productToUpdate.band;
+                    productToUpdate.listPrice = getProductPrice(newName, newBand);
+                    productToUpdate.implementationCost = getImplementationCost(newName, newBand);
+                } else {
+                    productToUpdate[field] = value;
+                }
+                newProducts[index] = productToUpdate;
+                setProducts(newProducts);
+            };
+
+            const addProduct = () => {
+                setProducts([...products, { id: Date.now(), name: 'Study Abroad', band: '0 - 100', listPrice: getProductPrice('Study Abroad', '0 - 100'), discount: { type: 'percentage', value: 0 }, hasImplementation: false, premiumImplementation: false, showUnlimited: false, implementationCost: getImplementationCost('Study Abroad', '0 - 100'), implementationDiscount: { type: 'percentage', value: 0 }, waiveYear1: false, waiveImplementation: false, isCurrentSolution: false, spreadImplementation: false }]);
+            };
+
+            const removeProduct = (index) => {
+                if (products.length > 1) setProducts(products.filter((_, i) => i !== index));
+            };
+
+            const calculateYearlyPrice = (basePrice, year, escalatorRate) => Math.round(basePrice * Math.pow(1 + escalatorRate / 100, year - 1));
+            const calculateDiscountedPrice = (price, discount) => {
+                const discountValue = discount.value === '' ? 0 : (typeof discount.value === 'string' ? parseInt(discount.value, 10) || 0 : discount.value);
+                if (discount.type === 'percentage') return price - Math.round(price * discountValue / 100);
+                return price - discountValue;
+            };
+            const formatCurrency = (amount) => '$' + amount.toLocaleString();
+            const getDiscountDisplay = (price, discount) => {
+                const discountValue = discount.value === '' ? 0 : (typeof discount.value === 'string' ? parseInt(discount.value, 10) || 0 : discount.value);
+                if (discountValue === 0) return '-';
+                if (discount.type === 'percentage') return `${discountValue}%`;
+                if (discount.type === 'dollar') {
+                    if (price === 0) return '-%';
+                    const percentage = Math.round((discountValue / price) * 100);
+                    return `${percentage}%`;
+                }
+                return '-';
+            };
+            const getFinalImplementationCost = (product) => {
+                return product.implementationCost + (product.premiumImplementation ? PREMIUM_IMPLEMENTATION_COST : 0);
+            };
+            
+            const calculateTotals = useCallback(() => {
+                let totalDiscountedPrice = 0;
+                let totalListPriceForSavings = 0;
+                products.forEach(product => {
+                    for (let year = 1; year <= term; year++) {
+                        const yearlyListPriceWithActualEscalator = calculateYearlyPrice(product.listPrice, year, escalator);
+                        const discountedPrice = calculateDiscountedPrice(yearlyListPriceWithActualEscalator, product.discount);
+                        totalDiscountedPrice += (product.waiveYear1 && year === 1 ? 0 : discountedPrice);
+                        const standardYearlyListPrice = calculateYearlyPrice(product.listPrice, year, STANDARD_ESCALATOR);
+                        totalListPriceForSavings += standardYearlyListPrice;
+                    }
+                    if (product.hasImplementation) {
+                        const finalImplCost = getFinalImplementationCost(product);
+                        const implementationFinalCost = product.waiveImplementation ? 0 : calculateDiscountedPrice(finalImplCost, product.implementationDiscount);
+                        totalDiscountedPrice += implementationFinalCost;
+                        totalListPriceForSavings += finalImplCost;
+                    }
+                });
+                return { totalDiscountedPrice, totalSavings: totalListPriceForSavings - totalDiscountedPrice };
+            }, [products, term, escalator]);
+            
+            const calculateAverageDiscount = useCallback(() => {
+                if (products.length === 0) return 0;
+                let totalListPriceValue = 0;
+                let totalDiscountValue = 0;
+                products.forEach(product => {
+                    let waivedYear1Discount = 0;
+                    for (let year = 1; year <= term; year++) {
+                        const yearlyPrice = calculateYearlyPrice(product.listPrice, year, escalator);
+                        totalListPriceValue += yearlyPrice;
+                        const discountAmount = product.discount.type === 'percentage' ? Math.round(yearlyPrice * (parseInt(product.discount.value, 10) || 0) / 100) : (parseInt(product.implementationDiscount.value, 10) || 0);
+                        totalDiscountValue += discountAmount;
+                        if (product.waiveYear1 && year === 1) {
+                            waivedYear1Discount = yearlyPrice - discountAmount;
+                        }
+                    }
+                    totalDiscountValue += waivedYear1Discount;
+                    if (product.hasImplementation) {
+                        const implCost = getFinalImplementationCost(product);
+                        totalListPriceValue += implCost;
+                        const implDiscountAmount = product.implementationDiscount.type === 'percentage' ? Math.round(implCost * (parseInt(product.implementationDiscount.value, 10) || 0) / 100) : (parseInt(product.implementationDiscount.value, 10) || 0);
+                        totalDiscountValue += implDiscountAmount;
+                        if (product.waiveImplementation) {
+                            totalDiscountValue += (implCost - implDiscountAmount);
+                        }
+                    }
+                });
+                if (totalListPriceValue === 0) return 0;
+                return Math.round((totalDiscountValue / totalListPriceValue) * 100);
+            }, [products, term, escalator]);
+            
+            const totals = useMemo(() => calculateTotals(), [calculateTotals]);
+            const averageDiscount = useMemo(() => calculateAverageDiscount(), [calculateAverageDiscount]);
+            const hasCurrentSolution = useMemo(() => products.some(p => p.isCurrentSolution), [products]);
+
+            const copyToPowerPoint = useCallback(() => {
+                try {
+                    const pricingTable = document.querySelector('#pricing-table-for-copy');
+                    if (!pricingTable) {
+                        showNotification('Copy failed: Pricing table not found.', 'error');
+                        return;
+                    }
+                    const range = document.createRange();
+                    range.selectNode(pricingTable);
+                    window.getSelection().removeAllRanges();
+                    window.getSelection().addRange(range);
+                    const successful = document.execCommand('copy');
+                    window.getSelection().removeAllRanges();
+                    if (successful) {
+                        showNotification('✅ Pricing table copied successfully!');
+                    } else {
+                        showNotification('Copy failed. Please try selecting the table manually.', 'error');
+                    }
+                } catch (err) {
+                    showNotification('Copy failed. An error occurred.', 'error');
+                }
+            }, []);
+            
+            const generateProposal = () => {
+                const inst = proposalData.institution || 'University Name';
+                const isSingleCoreProduct = products.length === 1 && ['Study Abroad', 'ISSS', 'Enterprise Travel Registry'].includes(products[0].name);
+                const primaryProduct = products[0].name;
+                const content = proposalContent[primaryProduct];
+
+                let title, summary, benefits, roi;
+
+                if (isSingleCoreProduct) {
+                    title = content.title;
+                    summary = content.summary(inst);
+                    benefits = `<div class="page-break"><h2>Solution Benefits for ${inst}</h2>${content.benefits()}</div>`;
+                    roi = `<div class="page-break"><h2>Projected Return on Investment</h2>${content.roi()}</div>`;
+                } else {
+                    title = 'Terra Dotta Global Engagement Solutions';
+                    summary = `<p>Terra Dotta is honored to partner with <strong>${inst}</strong> in advancing your mission of global education excellence. We propose implementing a comprehensive suite of Terra Dotta's Global Engagement Solutions, a transformative platform that unifies your international programs, enhances duty of care, and streamlines operations across the institution.</p><p>This investment represents a strategic commitment to providing a seamless, supportive, and safe international experience for your entire community. By integrating these powerful solutions, ${inst} will join over 750 institutions worldwide who trust Terra Dotta to be their partner in comprehensive international education management.</p>`;
+                    
+                    const solutionsIncluded = products.map(p => {
+                        const productContent = proposalContent[p.name];
+                        return `<div class="solution-item"><h3>${p.name}</h3>${productContent.blurb}</div>`;
+                    }).join('');
+                    benefits = `<div class="page-break"><h2>Solutions Included</h2>${solutionsIncluded}</div>`;
+                    roi = `<div class="page-break">
+                            <h2>Proven Results with University Partners</h2>
+                            ${clientSuccessStory}
+                            <blockquote style="border-left: 4px solid #00aeef; padding-left: 15px; margin: 15px 0; font-style: italic;">“We wouldn’t be able to do the things we do now if it weren’t for Terra Dotta.”<br><strong>— Director of International Student & Scholar Services, UMBC</strong></blockquote>
+                        </div>`;
+                }
+                
+                let summaryCardsHTML = `<div class="summary-cards" style="margin: 30px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; break-inside: avoid;">
+                    <table style="width: 100%; border-spacing: 20px 0; border-collapse: separate;">
+                        <tr>
+                            <td style="width: 50%; vertical-align: top; border-radius: 12px; padding: 24px; border: 1px solid #d1e5fd; background: linear-gradient(to bottom right, #f0f9ff, #e0f2fe);">
+                                <div style="font-size: 30px; font-weight: bold; color: #1e3a8a;">${formatCurrency(totals.totalDiscountedPrice)}</div>
+                                <div style="font-weight: 500; color: #2563eb; margin-top: 4px;">Total Investment</div>
+                                <div style="font-size: 14px; color: #1d4ed8; margin-top: 8px;">Total cost over ${term}-year contract term</div>
+                            </td>
+                            <td style="width: 50%; vertical-align: top; border-radius: 12px; padding: 24px; border: 1px solid #d1fae5; background: linear-gradient(to bottom right, #f0fdf4, #dcfce7);">
+                                <div style="font-size: 30px; font-weight: bold; color: #14532d;">${formatCurrency(totals.totalSavings)}</div>
+                                <div style="font-weight: 500; color: #166534; margin-top: 4px;">Total Savings</div>
+                                <div style="font-size: 14px; color: #15803d; margin-top: 8px;">vs. ${STANDARD_ESCALATOR}% standard escalator (${averageDiscount}% avg. discount)</div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>`;
+
+                let pricingTableHTML = `<div class="page-break"> <h2 class="section-header">Investment Breakdown</h2> <p style="margin-bottom: 20px; color: #475569;"><strong>Contract Term:</strong> ${term} Year${term > 1 ? 's' : ''} | <strong>Annual Escalator:</strong> ${escalator}% | <strong>Valid Through:</strong> ${formattedDate}</p> <table style="width: 100%; border-collapse: collapse; font-size: 11pt; border: 1px solid #cbd5e1;"> <thead> <tr style="background-color: #00aeef; color: white; font-weight: bold;"> <th style="border: 1px solid #cbd5e1; padding: 12px; text-align: left;">Solution</th> <th style="border: 1px solid #cbd5e1; padding: 12px; text-align: center;">List Price</th> <th style="border: 1px solid #cbd5e1; padding: 12px; text-align: center;">Discount</th> ${Array.from({length: term}, (_, i) => `<th style="border: 1px solid #cbd5e1; padding: 12px; text-align: center;">Year ${i + 1}</th>`).join('')} <th style="border: 1px solid #cbd5e1; padding: 12px; text-align: center; background-color: #f57922;">Total</th> </tr> </thead> <tbody>`;
+                products.forEach((product, idx) => { const yearlyPrices = Array.from({length: term}, (_, i) => { const yearlyPrice = calculateYearlyPrice(product.listPrice, i + 1, escalator); return calculateDiscountedPrice(yearlyPrice, product.discount); }); const productSubscriptionTotal = yearlyPrices.reduce((sum, price, i) => sum + (product.waiveYear1 && i === 0 ? 0 : price), 0); const rowBg = idx % 2 === 0 ? '#f8fafc' : '#ffffff'; pricingTableHTML += `<tr style="background-color: ${rowBg};"> <td style="border: 1px solid #cbd5e1; padding: 10px; font-weight: 600;">${product.name}</td> <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: right;">${formatCurrency(product.listPrice)}</td> <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: center;">${getDiscountDisplay(product.listPrice, product.discount)}</td> ${yearlyPrices.map((price, i) => `<td style="border: 1px solid #cbd5e1; padding: 10px; text-align: right;">${product.waiveYear1 && i === 0 ? '<span style="color: #dc2626; font-weight: bold;">WAIVED</span>' : formatCurrency(price)}</td>`).join('')} <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: right; font-weight: bold; background-color: #fef3e2;">${formatCurrency(productSubscriptionTotal)}</td> </tr>`; if (product.hasImplementation) { const finalImplCost = getFinalImplementationCost(product); const discountedImplCost = product.waiveImplementation ? 0 : calculateDiscountedPrice(finalImplCost, product.implementationDiscount); pricingTableHTML += `<tr style="background-color: ${rowBg};"> <td style="border: 1px solid #cbd5e1; padding: 10px; padding-left: 30px;">Implementation ${product.premiumImplementation ? '(Premium)' : ''}</td> <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: right;">${formatCurrency(finalImplCost)}</td> <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: center;">${getDiscountDisplay(finalImplCost, product.implementationDiscount)}</td> ${Array.from({length: term}, (_, i) => { let displayValue = '-'; if (!product.waiveImplementation && discountedImplCost > 0) { displayValue = product.spreadImplementation ? formatCurrency(Math.round(discountedImplCost / term)) : (i === 0 ? formatCurrency(discountedImplCost) : '-'); } return `<td style="border: 1px solid #cbd5e1; padding: 10px; text-align: right;">${product.waiveImplementation ? '<span style="color: #dc2626; font-weight: bold;">WAIVED</span>' : displayValue}</td>`; }).join('')} <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: right; font-weight: bold; background-color: #fef3e2;">${product.waiveImplementation ? 'WAIVED' : formatCurrency(discountedImplCost)}</td> </tr>`; } }); const totalListPrice = products.reduce((sum, p) => sum + p.listPrice + (p.hasImplementation ? getFinalImplementationCost(p) : 0), 0); pricingTableHTML += `<tr style="background-color: #1e293b; color: white; font-weight: bold;"> <td style="border: 1px solid #cbd5e1; padding: 12px;">TOTAL</td> <td style="border: 1px solid #cbd5e1; padding: 12px; text-align: right;">${formatCurrency(totalListPrice)}</td> <td style="border: 1px solid #cbd5e1; padding: 12px; text-align: center;">${averageDiscount}%</td> ${Array.from({length: term}, (_, yearIndex) => { const yearTotal = products.reduce((sum, product) => { const yearlyPrice = calculateYearlyPrice(product.listPrice, yearIndex + 1, escalator); const discountedPrice = calculateDiscountedPrice(yearlyPrice, product.discount); let finalPrice = product.waiveYear1 && yearIndex === 0 ? 0 : discountedPrice; if (product.hasImplementation && !product.waiveImplementation) { const finalImplCost = getFinalImplementationCost(product); const implCost = calculateDiscountedPrice(finalImplCost, product.implementationDiscount); finalPrice += product.spreadImplementation ? Math.round(implCost / term) : (yearIndex === 0 ? implCost : 0); } return sum + finalPrice; }, 0); return `<td style="border: 1px solid #cbd5e1; padding: 12px; text-align: right;">${formatCurrency(yearTotal)}</td>`; }).join('')} <td style="border: 1px solid #cbd5e1; padding: 12px; text-align: right; background-color: #f57922;">${formatCurrency(totals.totalDiscountedPrice)}</td> </tr> </tbody> </table> <p style="margin-top: 10px; font-size: 10pt; color: #64748b; font-style: italic;">*Implementation cost can be paid in Year 1 or spread over the contract term.</p>${summaryCardsHTML}</div>`;
+                
+                const proposalHTML = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${inst} - Terra Dotta Proposal</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;line-height:1.6;color:#1e293b;max-width:900px;margin:0 auto;padding:0}h1{font-size:36px;color:#00aeef;margin-bottom:10px}h2{font-size:24px;color:#1e293b;margin-bottom:15px;border-bottom:2px solid #00aeef;padding-bottom:10px}h3{font-size:18px;color:#334155;margin-top:25px;margin-bottom:10px}ul{margin:15px 0;padding-left:25px}li{margin:8px 0}.header{text-align:center;margin-bottom:50px;padding-bottom:30px;border-bottom:3px solid #00aeef}.stats{display:flex;justify-content:space-around;margin:30px 0;flex-wrap:wrap}.stat{text-align:center;padding:15px;background:#f1f5f9;border-radius:8px;min-width:180px;margin:5px}.stat-number{font-size:28px;font-weight:bold;color:#00aeef}.stat-label{font-size:13px;color:#64748b;margin-top:5px}.highlight-box{background:#e0f2fe;border-left:4px solid #00aeef;padding:20px;margin:20px 0;border-radius:4px}.contact-info{background:#f8fafc;padding:25px;border-radius:8px;margin-top:40px}.btn-print{background:#00aeef;color:white;padding:12px 30px;border:none;border-radius:6px;cursor:pointer;font-size:16px;font-weight:bold;margin:20px 10px}.btn-print:hover{background:#0099d6}.btn-close{background:#64748b}.btn-close:hover{background:#475569}.proposal-body{padding:40px 60px}.solution-item{margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid #e2e8f0}.solution-item:last-child{border-bottom:none}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:0;margin:0}.no-print{display:none!important}.page-break{break-before:page;page-break-before:page}.section-header,h2{break-after:avoid;page-break-after:avoid}table,.summary-cards{break-inside:avoid;page-break-inside:avoid}}</style></head><body><div class="no-print" style="text-align:center;margin:20px"><button class="btn-print" onclick="window.print()">🖨️ Print or Save as PDF</button><button class="btn-print btn-close" onclick="window.close()">✕ Close Preview</button></div><div class="proposal-body"><div class="header"><h1>Terra Dotta</h1><div style="font-size:28px;font-weight:600;color:#334155;margin:20px 0">${title}</div><div style="font-size:18px;color:#64748b">Proposal for ${inst}</div><div style="font-size:14px;color:#94a3b8;margin-top:10px">Presented by: ${proposalData.repName}</div><div style="font-size:14px;color:#94a3b8">${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div></div><h2>Executive Summary</h2>${summary}<h2>Company Overview</h2><div class="stats"><div class="stat"><div class="stat-number">750+</div><div class="stat-label">Institutions Globally</div></div><div class="stat"><div class="stat-number">7.5M</div><div class="stat-label">Students & Scholars</div></div><div class="stat"><div class="stat-number">54%</div><div class="stat-label">US International Students</div></div></div><h3>Our Mission</h3><p>To equip universities like ${inst} with intuitive tools that simplify complex international education processes, deliver data-driven insights, enhance communication and security, and strengthen institutional communication with reliable, effective, and secure systems.</p>${benefits}${roi}${pricingTableHTML}<div class="highlight-box"><h3 style="margin-top:0">Comprehensive Software Solution Includes:</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><h4 style="color:#00aeef;margin-bottom:8px">System Integrations</h4><ul style="margin:0"><li>SIS/SSO Integrations</li><li>Payment Gateway Integration</li></ul></div><div><h4 style="color:#00aeef;margin-bottom:8px">Support & Training</h4><ul style="margin:0"><li>24/6 Support (18-min response time)</li><li>Dedicated Customer Success Manager</li><li>Unlimited Admin Users</li><li>Regular Release Notes and Training</li></ul></div></div></div><div class="page-break"><h2>Terms and Conditions</h2><ul><li><strong>Contract Length:</strong> ${term} year${term > 1 ? 's' : ''}</li><li><strong>Payment Terms:</strong> Payment due upon invoice annually for services performed</li><li><strong>Price Lock:</strong> Years 1-${term} pricing guaranteed with ${escalator}% annual escalator</li><li><strong>Implementation:</strong> Can be paid in Year 1 or spread over contract term if needed</li></ul><h2>Next Steps</h2><ol><li><strong>Review and Approval</strong> - Internal stakeholder review</li><li><strong>Contract Execution</strong> - Formal agreement signing</li><li><strong>Implementation Kick-off</strong>- Detailed project timeline development</li><li><strong>System Integration and Implementation</strong> - Technical setup and configuration</li><li><strong>Training and Go-Live</strong> - Staff training and system launch</li></ol><div class="contact-info"><h3 style="margin-top:0;color:#00aeef">Contact Information</h3><p><strong>${proposalData.repName}</strong><br>Email: ${proposalData.repEmail}<br>Phone: ${proposalData.repPhone}</p></div><div style="text-align:center;margin-top:50px;padding-top:30px;border-top:2px solid #e2e8f0;font-size:12px;color:#94a3b8"><p><em>This proposal is valid through ${formattedDate}.</em></p><p style="margin-top:20px"><strong>Confidential & Proprietary</strong> - For discussion purposes only.</p></div></div></div></body></html>`;
+
+                const win = window.open('', '_blank');
+                if (win) {
+                    win.document.write(proposalHTML);
+                    win.document.close();
+                } else {
+                    showNotification('Please allow popups to view the proposal.', 'error');
+                }
+            };
+            
+            return (
+                <div className="min-h-screen bg-slate-50 font-sans">
+                    <Modal isOpen={modal.isOpen} onClose={() => confirmSpread(false)} onConfirm={() => confirmSpread(true)} title="Implementation Cost" >
+                        <p>How should the implementation cost be applied?</p>
+                    </Modal>
+                    <Notification message={notification.message} type={notification.type} onDismiss={() => setNotification({ message: '', type: 'success' })} />
+                    
+                    <div className="max-w-7xl mx-auto p-4 sm:p-6">
+                        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+                            {/* Header */}
+                            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-5 sm:p-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8"><Calculator /></div>
+                                    <h1 className="text-xl sm:text-2xl font-bold">Terra Dotta Pricing + Proposal Generator</h1>
+                                </div>
+                            </div>
+                            
+                            {/* Controls Bar */}
+                            <div className="border-b border-slate-200 bg-slate-50/50 p-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-semibold text-slate-700">Contract Term</label>
+                                        <select value={term} onChange={(e) => setTerm(parseInt(e.target.value))} className="w-full border border-slate-300 rounded-lg px-4 py-2.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                            {[1,2,3,4,5,6,7,8,9,10].map(y => ( <option key={y} value={y}>{y} Year{y > 1 ? 's' : ''}</option> ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-semibold text-slate-700">Annual Escalator (%)</label>
+                                        <input type="number" min="0" max="20" value={escalator} onChange={(e) => setEscalator(parseInt(e.target.value) || 0)} className="w-full border border-slate-300 rounded-lg px-4 py-2.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-semibold text-slate-700">Valid Through</label>
+                                        <input type="date" value={validThrough} onChange={(e) => setValidThrough(e.target.value)} className="w-full border border-slate-300 rounded-lg px-4 py-2.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                                        <div className="text-sm text-slate-600">Will display as: {formattedDate}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Main Content Grid */}
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 p-6">
+                                {/* Products Configuration - Left Side (3 cols) */}
+                                <div className="lg:col-span-3">
+                                    <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 text-slate-800">Product & Discount Configuration</h2>
+                                    <div className="space-y-6">
+                                        {products.map((product, index) => (
+                                            <div key={product.id} className="border border-slate-200 rounded-xl p-5 sm:p-6 bg-slate-50/30 shadow-sm hover:shadow-md transition-shadow">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm">{index + 1}</div>
+                                                        Product Details
+                                                    </h3>
+                                                    {products.length > 1 && (
+                                                        <button onClick={() => removeProduct(index)} className="text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-lg transition-colors" aria-label="Remove product">
+                                                            <div className="w-5 h-5"><Trash2 /></div>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                                                    <div className="lg:col-span-1 space-y-2">
+                                                        <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide">Product</label>
+                                                        <select value={product.name} onChange={(e) => updateProduct(index, 'name', e.target.value)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                                            {availableProducts.map(p => (<option key={p} value={p}>{p}</option>))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="lg:col-span-1 space-y-2">
+                                                        <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide">Band</label>
+                                                        <select value={product.band} onChange={(e) => updateProduct(index, 'band', e.target.value)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                                            {bandOptions.map(b => (<option key={b} value={b}>{b}</option>))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide">List Price</label>
+                                                        <input type="number" value={product.listPrice} onChange={(e) => updateProduct(index, 'listPrice', parseInt(e.target.value) || 0)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide">Discount</label>
+                                                        <div className="flex rounded-lg overflow-hidden border border-slate-300 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+                                                            <select value={product.discount.type} onChange={(e) => updateProduct(index, 'discount', {...product.discount, type: e.target.value})} className="border-0 px-2 py-2 text-sm w-14 bg-slate-100 focus:ring-0">
+                                                                <option value="percentage">%</option>
+                                                                <option value="dollar">$</option>
+                                                            </select>
+                                                            <input type="number" value={product.discount.value} onChange={(e) => updateProduct(index, 'discount', {...product.discount, value: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0})} className="border-0 px-3 py-2 text-sm flex-1 focus:ring-0 bg-white" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-4 pt-4 border-t border-slate-200">
+                                                    <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
+                                                        <label className="flex items-center cursor-pointer space-x-2"> <input type="checkbox" checked={product.waiveYear1} onChange={(e) => updateProduct(index, 'waiveYear1', e.target.checked)} className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500" /> <span className="text-sm font-medium text-slate-700">Waive Year 1</span> </label>
+                                                        <label className="flex items-center cursor-pointer space-x-2"> <input type="checkbox" checked={product.hasImplementation} onChange={(e) => handleImplementationChange(index, e.target.checked)} className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500" /> <span className="text-sm font-medium text-slate-700">Include Implementation</span> </label>
+                                                        {(product.name === 'Study Abroad' || product.name === 'ISSS') && ( <label className="flex items-center cursor-pointer space-x-2"> <input type="checkbox" checked={product.premiumImplementation} onChange={(e) => handlePremiumChange(index, e.target.checked)} className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500" /> <span className="text-sm font-medium text-slate-700">Premium Implementation</span> </label> )}
+                                                    </div>
+                                                    <div className="mt-2">
+                                                        <label className="flex items-center cursor-pointer space-x-2"> <input type="checkbox" checked={product.isCurrentSolution} onChange={(e) => updateProduct(index, 'isCurrentSolution', e.target.checked)} className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500" /> <span className="text-sm font-medium text-slate-700">Currently Used Solution</span> </label>
+                                                    </div>
+                                                </div>
+                                                {product.hasImplementation && (
+                                                    <div className="mt-4 pt-4 border-t border-dashed border-blue-200">
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50/50 rounded-lg">
+                                                            <div className="space-y-2"> <label className="block text-xs font-semibold text-blue-700 uppercase tracking-wide">Implementation Cost</label> <input type="number" value={product.implementationCost} onChange={(e) => updateProduct(index, 'implementationCost', parseInt(e.target.value) || 0)} className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" /> </div>
+                                                            <div className="space-y-2"> <label className="block text-xs font-semibold text-blue-700 uppercase tracking-wide">Implementation Discount</label> <div className="flex rounded-lg overflow-hidden border border-blue-300 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"> <select value={product.implementationDiscount.type} onChange={(e) => updateProduct(index, 'implementationDiscount', {...product.implementationDiscount, type: e.target.value})} className="border-0 px-2 py-2 text-sm w-14 bg-blue-100 focus:ring-0" > <option value="percentage">%</option> <option value="dollar">$</option> </select> <input type="number" value={product.implementationDiscount.value} onChange={(e) => updateProduct(index, 'implementationDiscount', {...product.implementationDiscount, value: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0})} className="border-0 px-3 py-2 text-sm flex-1 focus:ring-0 bg-white" /> </div> </div>
+                                                            <div className="space-y-2 flex items-end"> <label className="flex items-center cursor-pointer space-x-2 pb-2"> <input type="checkbox" checked={product.waiveImplementation} onChange={(e) => updateProduct(index, 'waiveImplementation', e.target.checked)} className="w-4 h-4 text-blue-600 border-blue-300 rounded focus:ring-blue-500" /> <span className="text-sm font-medium text-blue-700">Waive Implementation</span> </label> </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex justify-center pt-6 pb-2">
+                                        <button onClick={addProduct} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg flex items-center gap-2 transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg">
+                                            <div className="w-5 h-5"><Plus /></div>
+                                            <span>Add Product</span>
+                                        </button>
+                                    </div>
+                                    
+                                    <PricingTable products={products} term={term} escalator={escalator} getFinalImplementationCost={getFinalImplementationCost} calculateYearlyPrice={calculateYearlyPrice} calculateDiscountedPrice={calculateDiscountedPrice} formatCurrency={formatCurrency} getDiscountDisplay={getDiscountDisplay} totals={totals} averageDiscount={averageDiscount} />
+                                    
+                                    {/* Summary Cards */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 my-8">
+                                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6 shadow-lg">
+                                            <div className="flex items-center gap-4 mb-3">
+                                                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0"> <div className="w-6 h-6 text-white"><DollarSign /></div> </div>
+                                                <div>
+                                                    <div className="text-3xl font-bold text-blue-800">{formatCurrency(totals.totalDiscountedPrice)}</div>
+                                                    <div className="text-blue-600 font-medium">Total Investment</div>
+                                                </div>
+                                            </div>
+                                            <div className="text-blue-700 text-sm">Total cost over {term}-year contract term</div>
+                                        </div>
+                                        <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-6 shadow-lg">
+                                            <div className="flex items-center gap-4 mb-3">
+                                                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0"> <div className="w-6 h-6 text-white"><Calculator /></div> </div>
+                                                <div>
+                                                    <div className="text-3xl font-bold text-green-800">{formatCurrency(totals.totalSavings)}</div>
+                                                    <div className="text-green-600 font-medium">Total Savings</div>
+                                                </div>
+                                            </div>
+                                            <div className="text-green-700 text-sm">vs. {STANDARD_ESCALATOR}% standard escalator ({averageDiscount}% avg. discount)</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-center sm:justify-end items-center gap-4 pt-6 border-t border-slate-200">
+                                        <button onClick={copyToPowerPoint} className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-6 py-3 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all duration-200 text-white shadow-lg hover:shadow-xl hover:scale-105">
+                                            <div className="w-4 h-4"><Copy /></div>
+                                            Copy to PowerPoint
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Sidebar - Right Side (1 col) */}
+                                <div className="lg:col-span-1">
+                                    <div className="sticky top-6 bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl shadow-lg p-6 text-white">
+                                        <div className="flex items-center gap-2 mb-6">
+                                            <div className="w-6 h-6"><FileText /></div>
+                                            <h2 className="text-xl font-bold">Proposal Tools</h2>
+                                        </div>
+                                        <div className="space-y-4 mb-6">
+                                            <div> <label className="block text-sm font-semibold mb-2">Institution Name</label> <input type="text" value={proposalData.institution} onChange={(e) => setProposalData({...proposalData, institution: e.target.value})} placeholder="University Name" className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:ring-2 focus:ring-white/50" /> </div>
+                                            <hr className="border-white/20" />
+                                            <div> <label className="block text-sm font-semibold mb-2">Representative Name</label> <input type="text" value={proposalData.repName} onChange={(e) => setProposalData({...proposalData, repName: e.target.value})} placeholder="Enter Name" className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:ring-2 focus:ring-white/50" /> </div>
+                                            <div> <label className="block text-sm font-semibold mb-2">Representative Email</label> <input type="email" value={proposalData.repEmail} onChange={(e) => setProposalData({...proposalData, repEmail: e.target.value})} placeholder="@terradotta.com" className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:ring-2 focus:ring-white/50" /> </div>
+                                            <div> <label className="block text-sm font-semibold mb-2">Representative Phone</label> <input type="tel" value={proposalData.repPhone} onChange={(e) => setProposalData({...proposalData, repPhone: e.target.value})} placeholder="(555) 123-4567" className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:ring-2 focus:ring-white/50" /> </div>
+                                        </div>
+                                        <div className="space-y-3 mb-6">
+                                            <button onClick={generateProposal} className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-semibold transition-all shadow-lg hover:shadow-xl"> <div className="w-5 h-5"><Eye /></div> Generate Proposal </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Hidden table for PowerPoint copy */}
+                            <div id="pricing-table-for-copy" style={{position: 'absolute', left: '-9999px', top: 'auto', width: '800px'}}>
+                                <table style={{borderCollapse: 'collapse', width: '100%', fontFamily: 'sans-serif', fontSize: '11pt'}}>
+                                    <thead>
+                                        <tr>
+                                            <td colSpan={3 + term + 1} style={{padding: '8px', backgroundColor: '#f0f0f0', border: '1px solid #cccccc', fontWeight: 'bold'}}>
+                                                Valid through {formattedDate} with a {escalator}% Annual Escalator
+                                                {escalator < STANDARD_ESCALATOR && <span style={{fontWeight: 'normal', fontStyle: 'italic'}}> (Standard is {STANDARD_ESCALATOR}%)</span>}
+                                            </td>
+                                        </tr>
+                                        <tr style={{backgroundColor: '#00aeef', color: 'white', fontWeight: 'bold', textAlign: 'center'}}>
+                                            <th style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'left'}}>Solution</th>
+                                            <th style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'center'}}>List Price</th>
+                                            <th style={{border: '1px solid #cccccc', padding: '8px'}}>Discount</th>
+                                            {Array.from({length: term}, (_, i) => ( <th key={i} style={{border: '1px solid #cccccc', padding: '8px'}}>Year {i + 1}</th> ))}
+                                            <th style={{border: '1px solid #cccccc', padding: '8px', backgroundColor: '#f57922'}}>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {products.map((product, productIndex) => { const yearlyPrices = Array.from({length: term}, (_, i) => { const yearlyPrice = calculateYearlyPrice(product.listPrice, i + 1, escalator); return calculateDiscountedPrice(yearlyPrice, product.discount); }); const productSubscriptionTotal = yearlyPrices.reduce((sum, price, i) => sum + (product.waiveYear1 && i === 0 ? 0 : price), 0); const rowBg = product.isCurrentSolution ? '#e5e7eb' : (productIndex % 2 === 0 ? '#f8f8f8' : '#ffffff'); const finalImplCost = getFinalImplementationCost(product); return (
+                                            <React.Fragment key={`copy-${product.id}`}>
+                                                <tr style={{backgroundColor: rowBg}}>
+                                                    <td style={{border: '1px solid #cccccc', padding: '8px', fontWeight: 'bold'}}>{product.name}{product.isCurrentSolution ? '*' : ''}</td>
+                                                    <td style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'right'}}>{formatCurrency(product.listPrice)}</td>
+                                                    <td style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'center'}}>{getDiscountDisplay(product.listPrice, product.discount)}</td>
+                                                    {yearlyPrices.map((price, yearIndex) => ( <td key={yearIndex} style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'right'}}> {product.waiveYear1 && yearIndex === 0 ? 'WAIVED' : formatCurrency(price)} </td> ))}
+                                                    <td style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'right', fontWeight: 'bold', backgroundColor: '#fef3e2'}}>{formatCurrency(productSubscriptionTotal)}</td>
+                                                </tr>
+                                                {product.hasImplementation && (
+                                                    <tr style={{backgroundColor: rowBg}}>
+                                                        <td style={{border: '1px solid #cccccc', padding: '8px', paddingLeft: '24px'}}>Implementation {product.premiumImplementation ? '(Premium)' : ''}</td>
+                                                        <td style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'right'}}>{formatCurrency(finalImplCost)}</td>
+                                                        <td style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'center'}}>{getDiscountDisplay(finalImplCost, product.implementationDiscount)}</td>
+                                                        {Array.from({length: term}, (_, yearIndex) => { const discountedImplCost = product.waiveImplementation ? 0 : calculateDiscountedPrice(finalImplCost, product.implementationDiscount); let displayValue = '-'; if(discountedImplCost > 0) { if (product.spreadImplementation) { displayValue = formatCurrency(Math.round(discountedImplCost / term)); } else if (yearIndex === 0) { displayValue = formatCurrency(discountedImplCost); } } return ( <td key={yearIndex} style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'right'}}> {product.waiveImplementation ? 'WAIVED' : displayValue} </td> ); })}
+                                                        <td style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'right', fontWeight: 'bold', backgroundColor: '#fef3e2'}}> {product.waiveImplementation ? 'WAIVED' : formatCurrency(calculateDiscountedPrice(finalImplCost, product.implementationDiscount))} </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        ); })}
+                                        <tr style={{backgroundColor: '#333333', color: 'white', fontWeight: 'bold'}}>
+                                            <td style={{border: '1px solid #cccccc', padding: '8px'}}>TOTAL</td>
+                                            <td style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'right'}}> {formatCurrency(products.reduce((sum, p) => sum + p.listPrice + (p.hasImplementation ? getFinalImplementationCost(p) : 0), 0))} </td>
+                                            <td style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'center'}}>{averageDiscount}%</td>
+                                            {Array.from({length: term}, (_, yearIndex) => { const yearTotal = products.reduce((sum, product) => { const yearlyPrice = calculateYearlyPrice(product.listPrice, yearIndex + 1, escalator); const discountedPrice = calculateDiscountedPrice(yearlyPrice, product.discount); let finalPrice = product.waiveYear1 && yearIndex === 0 ? 0 : discountedPrice; if (product.hasImplementation && !product.waiveImplementation) { const finalImplCost = getFinalImplementationCost(product); const implCost = calculateDiscountedPrice(finalImplCost, product.implementationDiscount); if (product.spreadImplementation) { finalPrice += Math.round(implCost / term); } else if (yearIndex === 0) { finalPrice += implCost; } } return sum + finalPrice; }, 0); return <td key={yearIndex} style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'right'}}>{formatCurrency(yearTotal)}</td>; })}
+                                            <td style={{border: '1px solid #cccccc', padding: '8px', textAlign: 'right', backgroundColor: '#f57922'}}>{formatCurrency(totals.totalDiscountedPrice)}</td>
+                                        </tr>
+                                        {hasCurrentSolution && ( <tr> <td colSpan={4 + term + 1} style={{padding: '4px 8px', fontSize: '9pt', fontStyle: 'italic'}}> * Currently Used Solution </td> </tr> )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        // Mount React app
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+</html>
